@@ -320,8 +320,8 @@ if st.session_state.products and customer_company.strip():
                 pagesize=A4,
                 topMargin=2*cm,
                 bottomMargin=2*cm,
-                leftMargin=2*cm,
-                rightMargin=2*cm,
+                leftMargin=2.5*cm,
+                rightMargin=2.5*cm,
             )
             story = []
             
@@ -412,19 +412,50 @@ if st.session_state.products and customer_company.strip():
                     pkg_incl_str
                 ])
             
-            # 6 kolon için genişlikleri yeniden ayarla
+                        # 6 kolon için genişlikleri, sayfanın yazı alanına göre ayarla
+            # doc.width = sayfanın sol ve sağ marjı arasındaki kullanılabilir genişlik
+            available_width = doc.width
+
+            # Kolon genişlik oranları (toplamı 1 olacak)
+            col_width_fractions = [
+                0.30,  # Ürün Adı
+                0.17,  # KG Fiyatı (KDV Hariç)
+                0.08,  # KDV %
+                0.17,  # KG Fiyatı (KDV Dahil)
+                0.13,  # Ambalaj
+                0.15,  # Ambalaj Fiyatı (KDV Dahil)
+            ]
+
+            col_widths = [f * available_width for f in col_width_fractions]
+
             product_table = Table(
                 table_data,
-                colWidths=[5*cm, 3*cm, 2*cm, 3*cm, 2.5*cm, 3*cm]
+                colWidths=col_widths
             )
-            # 6 kolon için genişlikleri yeniden ayarla
-            product_table = Table(
-                table_data,
-                colWidths=[5*cm, 3*cm, 2*cm, 3*cm, 2.5*cm, 3*cm]
-            )
-            
+
             # TABLOYU SAYFANIN SOL MARJINA HİZALA
             product_table.hAlign = 'LEFT'
+
+            product_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.86, 0.24, 0.26)),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), FONT_BOLD),
+                ('FONTNAME', (0, 1), (-1, -1), FONT_NORMAL),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.Color(1, 0.95, 0.95), colors.white]),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ]))
+
+            story.append(product_table)
+            story.append(Spacer(1, 25))
+
             
             product_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.86, 0.24, 0.26)),
@@ -497,6 +528,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
