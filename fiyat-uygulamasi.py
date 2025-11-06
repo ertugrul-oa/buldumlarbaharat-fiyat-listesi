@@ -336,8 +336,7 @@ if st.session_state.products and customer_company.strip():
             normal_style = ParagraphStyle('NormalStyle', fontName=FONT_NORMAL, fontSize=10, spaceAfter=6)
             
             # İçerik
-            story.append(Paragraph("BULDUMLAR BİBER & BAHARAT", company_style))
-            story.append(Paragraph("ENTEGRE TESİSLERİ", company_style))
+            story.append(Paragraph("BULDUMLAR BİBER & BAHARAT<br/>ENTEGRE TESİSLERİ", company_style))
             story.append(Paragraph("FİYAT TEKLİFİ", title_style))
             story.append(Spacer(1, 15))
             
@@ -483,6 +482,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
