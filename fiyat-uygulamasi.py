@@ -418,12 +418,12 @@ if st.session_state.products and customer_company.strip():
 
             # Kolon genişlik oranları (toplamı 1 olacak)
             col_width_fractions = [
-                0.30,  # Ürün Adı
-                0.17,  # KG Fiyatı (KDV Hariç)
+                0.28,  # Ürün Adı (biraz küçülttük)
+                0.16,  # KG Fiyatı (KDV Hariç)
                 0.08,  # KDV %
-                0.17,  # KG Fiyatı (KDV Dahil)
-                0.13,  # Ambalaj
-                0.15,  # Ambalaj Fiyatı (KDV Dahil)
+                0.16,  # KG Fiyatı (KDV Dahil)
+                0.12,  # Ambalaj
+                0.20,  # Ambalaj Fiyatı (KDV Dahil) 🔥
             ]
 
             col_widths = [f * available_width for f in col_width_fractions]
@@ -507,6 +507,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
