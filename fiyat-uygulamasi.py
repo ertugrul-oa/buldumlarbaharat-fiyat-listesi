@@ -113,7 +113,7 @@ with col1:
     else:
         default_name = ""
         default_price = 0.0
-        default_vat = 20.0
+        default_vat = 1.0
         default_package_kg = 0.0
         button_text = "➕ Ürün Ekle"
         button_color = "primary"
@@ -340,7 +340,15 @@ if st.session_state.products and customer_company.strip():
             heading_style = ParagraphStyle('HeadingStyle', fontName=FONT_BOLD, fontSize=12,
                                           spaceAfter=8, textColor=colors.Color(0.86, 0.24, 0.26))
             
-            normal_style = ParagraphStyle('NormalStyle', fontName=FONT_NORMAL, fontSize=10, spaceAfter=6)
+            normal_style = ParagraphStyle(
+                'NormalStyle',
+                fontName=FONT_NORMAL,
+                fontSize=10,
+                spaceAfter=6,
+                leftIndent=0,   # Notlar paragrafı tablonun hizasında başlasın
+                alignment=TA_LEFT
+            )
+
             
             # İçerik
             story.append(Paragraph("BULDUMLAR BİBER & BAHARAT<br/>ENTEGRE TESİSLERİ", company_style))
@@ -489,6 +497,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
