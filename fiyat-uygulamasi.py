@@ -100,27 +100,53 @@ with col1:
     st.subheader("🛒 Ürün Ekle/Düzenle")
     
     # Düzenleme modunda mı kontrol et
+        # Düzenleme / yeni ekleme için varsayılan değerler
     if st.session_state.editing_index is not None:
         editing_product = st.session_state.products[st.session_state.editing_index]
         default_name = editing_product['name']
         default_price = editing_product['unit_price']
         default_vat = editing_product['vat_rate']
+        # Yeni eklenen alan: ambalaj kg
+        default_package_kg = editing_product.get('package_kg', 0.0)
         button_text = "✏️ Ürünü Güncelle"
         button_color = "secondary"
     else:
         default_name = ""
         default_price = 0.0
         default_vat = 20.0
+        default_package_kg = 0.0
         button_text = "➕ Ürün Ekle"
         button_color = "primary"
     
+    # Ürün adı
     product_name = st.text_input("Ürün Adı", value=default_name, placeholder="Örnek: Karabiber")
     
+    # KG fiyatı ve KDV
     col_price, col_vat = st.columns([2, 1])
     with col_price:
-        unit_price = st.number_input("Kilogram Fiyatı (KDV Hariç)", value=default_price, min_value=0.0, step=0.01)
+        unit_price = st.number_input(
+            "Kilogram Fiyatı (KDV Hariç)",
+            value=default_price,
+            min_value=0.0,
+            step=0.01
+        )
     with col_vat:
-        vat_rate = st.number_input("KDV (%)", value=default_vat, min_value=0.0, max_value=100.0, step=1.0)
+        vat_rate = st.number_input(
+            "KDV (%)",
+            value=default_vat,
+            min_value=0.0,
+            max_value=100.0,
+            step=1.0
+        )
+    
+    # Ambalaj bilgisi (opsiyonel)
+    package_kg = st.number_input(
+        "Ambalaj (kg) - opsiyonel",
+        value=default_package_kg,
+        min_value=0.0,
+        step=1.0,
+        help="Sadece kilogram bazlı satılan ürünler için 0 bırakın. Örn: 5, 10, 20"
+    )
     
     # Butonlar
     col_btn1, col_btn2 = st.columns([1, 1])
@@ -128,13 +154,26 @@ with col1:
     with col_btn1:
         if st.button(button_text, type=button_color):
             if product_name.strip():
+                # KG bazında KDV dahil fiyat
                 vat_price = unit_price * (1 + vat_rate / 100)
                 
+                # Ambalaj fiyatı hesaplama
+                if package_kg and package_kg > 0:
+                    package_price_excl_vat = unit_price * package_kg
+                    package_price_incl_vat = vat_price * package_kg
+                else:
+                    package_price_excl_vat = 0.0
+                    package_price_incl_vat = 0.0
+                
+                # Ürün sözlüğü
                 product = {
                     'name': product_name.strip(),
                     'unit_price': unit_price,
                     'vat_rate': vat_rate,
-                    'vat_price': vat_price
+                    'vat_price': vat_price,
+                    'package_kg': package_kg,
+                    'package_price_excl_vat': package_price_excl_vat,
+                    'package_price_incl_vat': package_price_incl_vat,
                 }
                 
                 if st.session_state.editing_index is not None:
@@ -149,6 +188,7 @@ with col1:
                     st.rerun()
             else:
                 st.error("Ürün adı boş olamaz!")
+
     
     with col_btn2:
         if st.session_state.editing_index is not None:
@@ -163,16 +203,38 @@ with col2:
         # Ürünleri DataFrame olarak göster
         df_data = []
         for i, product in enumerate(st.session_state.products):
+            package_kg = product.get('package_kg', 0.0) or 0.0
+            if package_kg > 0:
+                ambalaj_str = f"{package_kg:.0f} kg"
+                pkg_excl = product.get(
+                    'package_price_excl_vat',
+                    product['unit_price'] * package_kg
+                )
+                pkg_incl = product.get(
+                    'package_price_incl_vat',
+                    product['vat_price'] * package_kg
+                )
+                pkg_excl_str = f"{pkg_excl:.2f}"
+                pkg_incl_str = f"{pkg_incl:.2f}"
+            else:
+                ambalaj_str = ""
+                pkg_excl_str = ""
+                pkg_incl_str = ""
+            
             df_data.append({
                 'No': i + 1,
                 'Ürün Adı': product['name'],
-                'KDV Hariç (TL/kg)': f"{product['unit_price']:.2f}",
+                'KG Fiyatı KDV Hariç (TL)': f"{product['unit_price']:.2f}",
                 'KDV %': f"{product['vat_rate']:.0f}",
-                'KDV Dahil (TL/kg)': f"{product['vat_price']:.2f}"
+                'KG Fiyatı KDV Dahil (TL)': f"{product['vat_price']:.2f}",
+                'Ambalaj (kg)': ambalaj_str,
+                'Ambalaj Fiyatı KDV Hariç (TL)': pkg_excl_str,
+                'Ambalaj Fiyatı KDV Dahil (TL)': pkg_incl_str,
             })
         
         df = pd.DataFrame(df_data)
         st.dataframe(df, use_container_width=True, hide_index=True)
+
         
         # Her ürün için düzenle/sil butonları
         st.write("**İşlemler:**")
@@ -290,21 +352,66 @@ if st.session_state.products and customer_company.strip():
             story.append(Paragraph(customer_info, normal_style))
             story.append(Spacer(1, 20))
             
-            story.append(Paragraph("FİYAT LİSTESİ (Kilogram Bazında)", heading_style))
+            story.append(Paragraph("FİYAT LİSTESİ (KG ve Ambalaj Bazında)", heading_style))
             story.append(Spacer(1, 10))
             
-            # Tablo
-            table_data = [['Ürün Adı', 'Birim Fiyat\n(KDV Hariç)', 'KDV %', 'Birim Fiyat\n(KDV Dahil)']]
+            # Tablo başlıkları
+            table_data = [
+                [
+                    'Ürün Adı',
+                    'KG Fiyatı\n(KDV Hariç)',
+                    'KDV %',
+                    'KG Fiyatı\n(KDV Dahil)',
+                    'Ambalaj',
+                    'Ambalaj Fiyatı\n(KDV Dahil)'
+                ]
+            ]
             
+            # Ürün satırları
             for product in st.session_state.products:
+                package_kg = product.get('package_kg', 0.0) or 0.0
+                if package_kg > 0:
+                    ambalaj = f"{package_kg:.0f} kg"
+                    pkg_incl = product.get(
+                        'package_price_incl_vat',
+                        product['vat_price'] * package_kg
+                    )
+                    pkg_incl_str = f"{pkg_incl:.2f} TL"
+                else:
+                    ambalaj = "-"
+                    pkg_incl_str = "-"
+                
                 table_data.append([
                     product['name'],
                     f"{product['unit_price']:.2f} TL/kg",
                     f"%{product['vat_rate']:.0f}",
-                    f"{product['vat_price']:.2f} TL/kg"
+                    f"{product['vat_price']:.2f} TL/kg",
+                    ambalaj,
+                    pkg_incl_str
                 ])
             
-            product_table = Table(table_data, colWidths=[6*cm, 3.5*cm, 2*cm, 3.5*cm])
+            # 6 kolon için genişlikleri yeniden ayarla
+            product_table = Table(
+                table_data,
+                colWidths=[5*cm, 3*cm, 2*cm, 3*cm, 2.5*cm, 3*cm]
+            )
+            product_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.86, 0.24, 0.26)),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, 0), FONT_BOLD),
+                ('FONTNAME', (0, 1), (-1, -1), FONT_NORMAL),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.Color(1, 0.95, 0.95), colors.white]),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ]))
+
             product_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.86, 0.24, 0.26)),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -327,7 +434,7 @@ if st.session_state.products and customer_company.strip():
             
             notes = """<b>NOTLAR:</b><br/>
             • Fiyatlar Türk Lirası cinsindendir.<br/>
-            • Fiyatlar kilogram bazında verilmiştir.<br/>
+            • Fiyatlar kilogram ve belirtilen ambalaj bazında verilmiştir.<br/>
             • Minimum sipariş miktarları için ayrıca bilgi verilecektir.<br/>
             • Teslim süresi sipariş onayından sonra belirlenecektir."""
             
