@@ -319,9 +319,16 @@ if st.session_state.products and customer_company.strip():
             story = []
             
             # PDF Stiller
-            company_style = ParagraphStyle('CompanyStyle', fontName=FONT_BOLD, fontSize=16,
-                                          spaceAfter=25, alignment=TA_CENTER,
-                                          textColor=colors.Color(0.86, 0.24, 0.26))
+            company_style = ParagraphStyle(
+                'CompanyStyle',
+                fontName=FONT_BOLD,
+                fontSize=16,
+                leading=20,  # <-- SATIR ARALIĞI (fontSize'tan büyük olsun)
+                spaceAfter=25,
+                alignment=TA_CENTER,
+                textColor=colors.Color(0.86, 0.24, 0.26)
+            )
+
             
             title_style = ParagraphStyle('TitleStyle', fontName=FONT_BOLD, fontSize=18,
                                         spaceAfter=20, alignment=TA_CENTER,
@@ -482,6 +489,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
