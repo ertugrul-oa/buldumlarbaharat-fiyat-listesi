@@ -172,8 +172,9 @@ with col1:
         package_choice = st.selectbox(
             "Ambalaj",
             options=[1, 25],
-            index=0 if int((editing_product.get('package_kg', 1) or 1)) == 1 else 1
+            index=0
         )
+
         package_kg = float(package_choice)
 
     else:
