@@ -610,6 +610,7 @@ if st.session_state.products and customer_company.strip():
             
             notes = """<b>NOTLAR:</b><br/>
             • Fiyatlar Türk Lirası cinsindendir.<br/>
+            • Fiyatlara nakliye dahildir.<br/>
             • Fiyatlar kilogram ve belirtilen ambalaj bazında verilmiştir.<br/>
             • Minimum sipariş miktarları için ayrıca bilgi verilecektir.<br/>
             • Teslim süresi sipariş onayından sonra belirlenecektir."""
@@ -658,6 +659,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
