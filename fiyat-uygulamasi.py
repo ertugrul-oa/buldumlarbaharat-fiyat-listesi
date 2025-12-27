@@ -100,18 +100,14 @@ with col1:
     st.subheader("🛒 Ürün Ekle/Düzenle")
     
     # Düzenleme modunda mı kontrol et
-    # Düzenleme / yeni ekleme için varsayılan değerler
+        # Düzenleme / yeni ekleme için varsayılan değerler
     if st.session_state.editing_index is not None:
         editing_product = st.session_state.products[st.session_state.editing_index]
-        default_name = editing_product.get('name', '')
-        # Eski ürünlerde unit_price, yeni (vadeli) ürünlerde cash_price olabilir
-        default_price = float(editing_product.get('unit_price', editing_product.get('cash_price', 0.0)) or 0.0)
-        default_vat = float(editing_product.get('vat_rate', 1.0) or 1.0)
-        default_package_kg = float(editing_product.get('package_kg', 0.0) or 0.0)
-
-        # Vadeli mod varsayılanı (düzenlemede otomatik açılır)
-        default_dual_mode = bool(editing_product.get('dual_price_mode', False))
-
+        default_name = editing_product['name']
+        default_price = editing_product['unit_price']
+        default_vat = editing_product['vat_rate']
+        # Yeni eklenen alan: ambalaj kg
+        default_package_kg = editing_product.get('package_kg', 0.0)
         button_text = "✏️ Ürünü Güncelle"
         button_color = "secondary"
     else:
@@ -119,22 +115,21 @@ with col1:
         default_price = 0.0
         default_vat = 1.0
         default_package_kg = 0.0
-        default_dual_mode = False
         button_text = "➕ Ürün Ekle"
         button_color = "primary"
-
-    # ✅ Yeni: Çift fiyat (Nakit/Kart + Vadeli) modu
-    dual_price_mode = st.checkbox(
-        "Nakit/Kart + Vadeli fiyat girişi (vade günlü)",
-        value=default_dual_mode,
-        help="Açıksa: Nakit/Kart + Vadeli fiyat ve vade günü alınır. Ambalaj sadece 1 kg / 25 kg olur. Ambalaj fiyatı yazmaz."
-    )
-
+    
     # Ürün adı
     product_name = st.text_input("Ürün Adı", value=default_name, placeholder="Örnek: Karabiber")
-
-    # KDV
+    
+    # KG fiyatı ve KDV
     col_price, col_vat = st.columns([2, 1])
+    with col_price:
+        unit_price = st.number_input(
+            "Kilogram Fiyatı (KDV Hariç)",
+            value=default_price,
+            min_value=0.0,
+            step=0.01
+        )
     with col_vat:
         vat_rate = st.number_input(
             "KDV (%)",
@@ -143,111 +138,44 @@ with col1:
             max_value=100.0,
             step=1.0
         )
-
-    if dual_price_mode:
-        with col_price:
-            cash_price = st.number_input(
-                "Nakit/Kart KG Fiyatı (KDV Hariç)",
-                value=float(editing_product.get('cash_price', default_price)) if st.session_state.editing_index is not None else default_price,
-                min_value=0.0,
-                step=0.01
-            )
-
-        col_vadeli, col_vadegun = st.columns([2, 1])
-        with col_vadeli:
-            deferred_price = st.number_input(
-                "Vadeli KG Fiyatı (KDV Hariç)",
-                value=float(editing_product.get('deferred_price', default_price)) if st.session_state.editing_index is not None else default_price,
-                min_value=0.0,
-                step=0.01
-            )
-        with col_vadegun:
-            vade_days = st.number_input(
-                "Vade (gün)",
-                value=int(editing_product.get('vade_days', 30)) if st.session_state.editing_index is not None else 30,
-                min_value=0,
-                step=1
-            )
-
-        package_choice = st.selectbox(
-            "Ambalaj",
-            options=[1, 25],
-            index=0
-        )
-
-        package_kg = float(package_choice)
-
-    else:
-        with col_price:
-            unit_price = st.number_input(
-                "Kilogram Fiyatı (KDV Hariç)",
-                value=default_price,
-                min_value=0.0,
-                step=0.01
-            )
-
-        # Ambalaj bilgisi (opsiyonel)
-        package_kg = st.number_input(
-            "Ambalaj (kg) - opsiyonel",
-            value=default_package_kg,
-            min_value=0.0,
-            step=1.0,
-            help="Sadece kilogram bazlı satılan ürünler için 0 bırakın. Örn: 5, 10, 20"
-        )
-
+    
+    # Ambalaj bilgisi (opsiyonel)
+    package_kg = st.number_input(
+        "Ambalaj (kg) - opsiyonel",
+        value=default_package_kg,
+        min_value=0.0,
+        step=1.0,
+        help="Sadece kilogram bazlı satılan ürünler için 0 bırakın. Örn: 5, 10, 20"
+    )
+    
     # Butonlar
     col_btn1, col_btn2 = st.columns([1, 1])
     
     with col_btn1:
         if st.button(button_text, type=button_color):
             if product_name.strip():
-                if dual_price_mode:
-                    cash_vat_incl = cash_price * (1 + vat_rate / 100)
-                    deferred_vat_incl = deferred_price * (1 + vat_rate / 100)
-
-                    cash_vat_amount = cash_vat_incl - cash_price
-                    deferred_vat_amount = deferred_vat_incl - deferred_price
-
-                    product = {
-                        'name': product_name.strip(),
-                        'vat_rate': vat_rate,
-                        'dual_price_mode': True,
-
-                        'cash_price': float(cash_price),
-                        'cash_vat_amount': float(cash_vat_amount),
-                        'cash_vat_incl': float(cash_vat_incl),
-
-                        'deferred_price': float(deferred_price),
-                        'deferred_vat_amount': float(deferred_vat_amount),
-                        'deferred_vat_incl': float(deferred_vat_incl),
-
-                        'vade_days': int(vade_days),
-                        'package_kg': float(package_kg),  # 1 veya 25
-                    }
+                # KG bazında KDV dahil fiyat
+                vat_price = unit_price * (1 + vat_rate / 100)
+                
+                # Ambalaj fiyatı hesaplama
+                if package_kg and package_kg > 0:
+                    package_price_excl_vat = unit_price * package_kg
+                    package_price_incl_vat = vat_price * package_kg
                 else:
-                    # KG bazında KDV dahil fiyat
-                    vat_price = unit_price * (1 + vat_rate / 100)
-
-                    # Ambalaj fiyatı hesaplama
-                    if package_kg and package_kg > 0:
-                        package_price_excl_vat = unit_price * package_kg
-                        package_price_incl_vat = vat_price * package_kg
-                    else:
-                        package_price_excl_vat = 0.0
-                        package_price_incl_vat = 0.0
-
-                    # Ürün sözlüğü
-                    product = {
-                        'name': product_name.strip(),
-                        'unit_price': float(unit_price),
-                        'vat_rate': float(vat_rate),
-                        'vat_price': float(vat_price),
-                        'package_kg': float(package_kg),
-                        'package_price_excl_vat': float(package_price_excl_vat),
-                        'package_price_incl_vat': float(package_price_incl_vat),
-                        'dual_price_mode': False,
-                    }
-
+                    package_price_excl_vat = 0.0
+                    package_price_incl_vat = 0.0
+                
+                # Ürün sözlüğü
+                product = {
+                    'name': product_name.strip(),
+                    'unit_price': unit_price,
+                    'vat_rate': vat_rate,
+                    'vat_price': vat_price,
+                    'package_kg': package_kg,
+                    'package_price_excl_vat': package_price_excl_vat,
+                    'package_price_incl_vat': package_price_incl_vat,
+                }
+                
                 if st.session_state.editing_index is not None:
                     # Güncelleme
                     st.session_state.products[st.session_state.editing_index] = product
@@ -275,48 +203,35 @@ with col2:
         # Ürünleri DataFrame olarak göster
         df_data = []
         for i, product in enumerate(st.session_state.products):
-            is_dual = product.get('dual_price_mode', False)
-
-            if is_dual:
-                df_data.append({
-                    'No': i + 1,
-                    'Ürün Adı': product.get('name', ''),
-                    'Ambalaj': f"{int(product.get('package_kg', 1) or 1)} kg",
-
-                    'Nakit/Kart KG (KDV Hariç)': f"{float(product.get('cash_price', 0.0)):.2f}",
-                    'Nakit/Kart KDV (TL)': f"{float(product.get('cash_vat_amount', 0.0)):.2f}",
-                    'Nakit/Kart KG (KDV Dahil)': f"{float(product.get('cash_vat_incl', 0.0)):.2f}",
-
-                    'Vadeli KG (KDV Hariç)': f"{float(product.get('deferred_price', 0.0)):.2f}",
-                    'Vadeli KDV (TL)': f"{float(product.get('deferred_vat_amount', 0.0)):.2f}",
-                    'Vadeli KG (KDV Dahil)': f"{float(product.get('deferred_vat_incl', 0.0)):.2f}",
-
-                    'Vade (Gün)': f"{int(product.get('vade_days', 0) or 0)}"
-                })
+            package_kg = product.get('package_kg', 0.0) or 0.0
+            if package_kg > 0:
+                ambalaj_str = f"{package_kg:.0f} kg"
+                pkg_excl = product.get(
+                    'package_price_excl_vat',
+                    product['unit_price'] * package_kg
+                )
+                pkg_incl = product.get(
+                    'package_price_incl_vat',
+                    product['vat_price'] * package_kg
+                )
+                pkg_excl_str = f"{pkg_excl:.2f}"
+                pkg_incl_str = f"{pkg_incl:.2f}"
             else:
-                package_kg = float(product.get('package_kg', 0.0) or 0.0)
-                if package_kg > 0:
-                    ambalaj_str = f"{package_kg:.0f} kg"
-                    pkg_excl = product.get('package_price_excl_vat', float(product.get('unit_price', 0.0)) * package_kg)
-                    pkg_incl = product.get('package_price_incl_vat', float(product.get('vat_price', 0.0)) * package_kg)
-                    pkg_excl_str = f"{float(pkg_excl):.2f}"
-                    pkg_incl_str = f"{float(pkg_incl):.2f}"
-                else:
-                    ambalaj_str = ""
-                    pkg_excl_str = ""
-                    pkg_incl_str = ""
-
-                df_data.append({
-                    'No': i + 1,
-                    'Ürün Adı': product.get('name', ''),
-                    'KG Fiyatı KDV Hariç (TL)': f"{float(product.get('unit_price', 0.0)):.2f}",
-                    'KDV %': f"{float(product.get('vat_rate', 0.0)):.0f}",
-                    'KG Fiyatı KDV Dahil (TL)': f"{float(product.get('vat_price', 0.0)):.2f}",
-                    'Ambalaj (kg)': ambalaj_str,
-                    'Ambalaj Fiyatı KDV Hariç (TL)': pkg_excl_str,
-                    'Ambalaj Fiyatı KDV Dahil (TL)': pkg_incl_str,
-                })
-
+                ambalaj_str = ""
+                pkg_excl_str = ""
+                pkg_incl_str = ""
+            
+            df_data.append({
+                'No': i + 1,
+                'Ürün Adı': product['name'],
+                'KG Fiyatı KDV Hariç (TL)': f"{product['unit_price']:.2f}",
+                'KDV %': f"{product['vat_rate']:.0f}",
+                'KG Fiyatı KDV Dahil (TL)': f"{product['vat_price']:.2f}",
+                'Ambalaj (kg)': ambalaj_str,
+                'Ambalaj Fiyatı KDV Hariç (TL)': pkg_excl_str,
+                'Ambalaj Fiyatı KDV Dahil (TL)': pkg_incl_str,
+            })
+        
         df = pd.DataFrame(df_data)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
@@ -462,8 +377,8 @@ if st.session_state.products and customer_company.strip():
             story.append(Paragraph("FİYAT LİSTESİ (KG ve Ambalaj Bazında)", heading_style))
             story.append(Spacer(1, 10))
             
-            # Normal ürünler tablosu
-            normal_table_data = [
+            # Tablo başlıkları
+            table_data = [
                 [
                     'Ürün Adı',
                     'KG Fiyatı\n(KDV Hariç)',
@@ -473,56 +388,31 @@ if st.session_state.products and customer_company.strip():
                     'Ambalaj Fiyatı\n(KDV Dahil)'
                 ]
             ]
-
-            # Vadeli (çift fiyat) ürünler tablosu
-            dual_table_data = [
-                [
-                    'Ürün Adı',
-                    'Ambalaj',
-                    'Nakit/Kart\n(Hariç)',
-                    'Nakit/Kart\nKDV',
-                    'Nakit/Kart\n(Dahil)',
-                    'Vadeli\n(Hariç)',
-                    'Vadeli\nKDV',
-                    'Vadeli\n(Dahil)',
-                    'Vade\n(Gün)'
-                ]
-            ]
-
+            
             # Ürün satırları
             for product in st.session_state.products:
-                if product.get('dual_price_mode', False):
-                    dual_table_data.append([
-                        product.get('name', ''),
-                        f"{int(product.get('package_kg', 1) or 1)} kg",
-                        f"{float(product.get('cash_price', 0.0)):.2f} TL/kg",
-                        f"{float(product.get('cash_vat_amount', 0.0)):.2f} TL",
-                        f"{float(product.get('cash_vat_incl', 0.0)):.2f} TL/kg",
-                        f"{float(product.get('deferred_price', 0.0)):.2f} TL/kg",
-                        f"{float(product.get('deferred_vat_amount', 0.0)):.2f} TL",
-                        f"{float(product.get('deferred_vat_incl', 0.0)):.2f} TL/kg",
-                        f"{int(product.get('vade_days', 0) or 0)}"
-                    ])
+                package_kg = product.get('package_kg', 0.0) or 0.0
+                if package_kg > 0:
+                    ambalaj = f"{package_kg:.0f} kg"
+                    pkg_incl = product.get(
+                        'package_price_incl_vat',
+                        product['vat_price'] * package_kg
+                    )
+                    pkg_incl_str = f"{pkg_incl:.2f} TL"
                 else:
-                    package_kg = float(product.get('package_kg', 0.0) or 0.0)
-                    if package_kg > 0:
-                        ambalaj = f"{package_kg:.0f} kg"
-                        pkg_incl = product.get('package_price_incl_vat', float(product.get('vat_price', 0.0)) * package_kg)
-                        pkg_incl_str = f"{float(pkg_incl):.2f} TL"
-                    else:
-                        ambalaj = ""
-                        pkg_incl_str = ""
-
-                    normal_table_data.append([
-                        product.get('name', ''),
-                        f"{float(product.get('unit_price', 0.0)):.2f} TL/kg",
-                        f"%{float(product.get('vat_rate', 0.0)):.0f}",
-                        f"{float(product.get('vat_price', 0.0)):.2f} TL/kg",
-                        ambalaj,
-                        pkg_incl_str
-                    ])
-
-# 6 kolon için genişlikleri, sayfanın yazı alanına göre ayarla
+                    ambalaj = "-"
+                    pkg_incl_str = "-"
+                
+                table_data.append([
+                    product['name'],
+                    f"{product['unit_price']:.2f} TL/kg",
+                    f"%{product['vat_rate']:.0f}",
+                    f"{product['vat_price']:.2f} TL/kg",
+                    ambalaj,
+                    pkg_incl_str
+                ])
+            
+                        # 6 kolon için genişlikleri, sayfanın yazı alanına göre ayarla
             # doc.width = sayfanın sol ve sağ marjı arasındaki kullanılabilir genişlik
             available_width = doc.width
 
@@ -539,7 +429,7 @@ if st.session_state.products and customer_company.strip():
             col_widths = [f * available_width for f in col_width_fractions]
 
             product_table = Table(
-                normal_table_data,
+                table_data,
                 colWidths=col_widths
             )
 
@@ -564,53 +454,11 @@ if st.session_state.products and customer_company.strip():
             ]))
 
             story.append(product_table)
-            story.append(Spacer(1, 20))
-
-            # Vadeli tablo (varsa)
-            if len(dual_table_data) > 1:
-                story.append(Paragraph("VADELİ FİYAT LİSTESİ (Nakit/Kart + Vadeli)", heading_style))
-                story.append(Spacer(1, 10))
-
-                dual_available_width = doc.width
-                dual_col_width_fractions = [
-                    0.18,  # Ürün Adı
-                    0.09,  # Ambalaj
-                    0.11,  # NK Hariç
-                    0.09,  # NK KDV
-                    0.11,  # NK Dahil
-                    0.11,  # Vadeli Hariç
-                    0.09,  # Vadeli KDV
-                    0.11,  # Vadeli Dahil
-                    0.11,  # Vade
-                ]
-                dual_col_widths = [f * dual_available_width for f in dual_col_width_fractions]
-
-                dual_table = Table(dual_table_data, colWidths=dual_col_widths, repeatRows=1)
-                dual_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, 0), 9),
-                    ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#bdc3c7')),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('FONTSIZE', (0, 1), (-1, -1), 8),
-                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
-                ]))
-                dual_table.hAlign = 'LEFT'
-                story.append(dual_table)
-                story.append(Spacer(1, 20))
-            else:
-                story.append(Spacer(1, 10))
-
-
+            story.append(Spacer(1, 25))
 
             
             notes = """<b>NOTLAR:</b><br/>
             • Fiyatlar Türk Lirası cinsindendir.<br/>
-            • Fiyatlara nakliye dahildir.<br/>
             • Fiyatlar kilogram ve belirtilen ambalaj bazında verilmiştir.<br/>
             • Minimum sipariş miktarları için ayrıca bilgi verilecektir.<br/>
             • Teslim süresi sipariş onayından sonra belirlenecektir."""
@@ -659,7 +507,6 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
-
 
 
 
