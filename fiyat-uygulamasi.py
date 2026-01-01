@@ -341,6 +341,10 @@ if st.session_state.products and customer_company.strip():
                                         spaceAfter=20, alignment=TA_CENTER,
                                         textColor=colors.Color(0.86, 0.24, 0.26))
             
+            title_style_2 = ParagraphStyle('TitleStyle', fontName=FONT_BOLD, fontSize=18,
+                                        spaceAfter=15, alignment=TA_CENTER,
+                                        textColor=colors.Color(0.86, 0.24, 0.26))
+            
             sub_title_style = ParagraphStyle('SubTitleStyle', fontName=FONT_BOLD, fontSize=14,
                                           spaceAfter=4, alignment=TA_CENTER, textColor=colors.Color(0.86, 0.24, 0.26))
             
@@ -362,7 +366,7 @@ if st.session_state.products and customer_company.strip():
             
             # İçerik
             story.append(Paragraph("BULDUMLAR BİBER & BAHARAT<br/>ENTEGRE TESİSLERİ", company_style))
-            story.append(Paragraph("FİYAT TEKLİFİ", title_style))
+            story.append(Paragraph("FİYAT TEKLİFİ", title_style_2))
             story.append(Paragraph("(Peşin Satış Fiyatları)", sub_title_style))
             story.append(Spacer(1, 15))
             
@@ -512,6 +516,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
