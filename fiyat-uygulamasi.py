@@ -360,6 +360,7 @@ if st.session_state.products and customer_company.strip():
             # İçerik
             story.append(Paragraph("BULDUMLAR BİBER & BAHARAT<br/>ENTEGRE TESİSLERİ", company_style))
             story.append(Paragraph("FİYAT TEKLİFİ", title_style))
+            story.append(Paragraph("PEŞİN SATIŞ FİYATLARI", title_style))
             story.append(Spacer(1, 15))
             
             today = datetime.now()
@@ -508,6 +509,7 @@ else:
         st.warning("PDF oluşturmak için en az bir ürün ekleyin.")
     if not customer_company.strip():
         st.warning("PDF oluşturmak için müşteri firma adını girin.")
+
 
 
 
